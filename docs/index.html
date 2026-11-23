@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>XYNTH-1 — Tactile Force Touch Trackpad Synthesizer for macOS</title>
+  <meta name="description" content="Turn your MacBook's Force Touch trackpad into a 5-finger tactile synthesizer. Hear and feel sound directly from the glass — zero speakers used." />
+  <meta property="og:title" content="XYNTH-1 — Tactile Trackpad Synthesizer" />
+  <meta property="og:description" content="Play your MacBook's Force Touch trackpad like a polyphonic XY synthesizer. Zero speakers used." />
+  <meta property="og:image" content="icon.png" />
+  <meta name="theme-color" content="#eef0eb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b0e14" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" href="icon.png" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Full-viewport reactive waveform wherever the user moves or touches -->
+  <canvas id="ambient-wave" aria-hidden="true"></canvas>
+
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="XYNTH-1 home">
+        <img src="icon.png" alt="" width="30" height="30" class="brand-icon" />
+        <span class="brand-name">XYNTH-1</span>
+        <span class="grille" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </a>
+
+      <nav class="top-actions" aria-label="Page utilities">
+        <button id="motion-toggle" type="button" class="util-btn">Pause motion</button>
+        <button id="theme-toggle" type="button" class="util-btn">Dark</button>
+        <a class="util-btn" href="https://github.com/mj0lken/xynth-1" target="_blank" rel="noopener">GitHub ↗</a>
+      </nav>
+    </header>
+
+    <main id="top" class="hero">
+      <div class="hero-copy">
+        <h1>Play the glass.<br /><span class="accent-word">Zero speakers.</span></h1>
+        <p class="subtitle">
+          A tactile macOS synthesizer that drives your MacBook’s Force Touch motor up to 4&nbsp;kHz — hear and feel pitch, volume, and 5-finger chords straight under your fingertips.
+        </p>
+      </div>
+
+      <!-- Simplified playable mini-XYNTH-1 with embedded liquid magnetic ferrofluid -->
+      <section class="synth-chassis" aria-label="Interactive web synthesizer preview">
+        <div class="chassis-stripe" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+
+        <div class="pad-wrap">
+          <div id="pad-surface" class="pad-surface" role="application" tabindex="0"
+               aria-label="Interactive XY touch synthesizer pad. Drag horizontally for pitch and vertically for volume, or use arrow keys.">
+            <canvas id="pad-canvas" aria-hidden="true"></canvas>
+
+            <div class="pad-hud pad-hud-top" aria-hidden="true">
+              <span class="hud-pill" id="pad-status">
+                <span class="led-dot" id="pad-led"></span>
+                <span id="pad-status-text">TOUCH OR DRAG TO PLAY</span>
+              </span>
+              <span class="hud-pill hud-mono" id="pad-readout">— · 0 Hz</span>
+            </div>
+
+            <div class="pad-hud pad-hud-bottom" aria-hidden="true">
+              <span>X → PITCH</span>
+              <span>Y → VOLUME</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Minimal tactile hardware control strip -->
+        <div class="mini-deck">
+          <div class="control-group" role="group" aria-label="Timbre">
+            <span class="group-label">TIMBRE</span>
+            <button type="button" class="hw-key is-active" data-timbre="warm" aria-pressed="true">
+              <span class="key-led" aria-hidden="true"></span>WARM
+            </button>
+            <button type="button" class="hw-key" data-timbre="sine" aria-pressed="false">
+              <span class="key-led" aria-hidden="true"></span>SINE
+            </button>
+            <button type="button" class="hw-key" data-timbre="saw" aria-pressed="false">
+              <span class="key-led" aria-hidden="true"></span>SAW
+            </button>
+            <button type="button" class="hw-key" data-timbre="bell" aria-pressed="false">
+              <span class="key-led" aria-hidden="true"></span>BELL
+            </button>
+          </div>
+
+          <div class="control-group" role="group" aria-label="Scale and Ferrofluid">
+            <button type="button" id="scale-toggle" class="hw-key is-active" aria-pressed="true">
+              <span class="key-led" aria-hidden="true"></span><span id="scale-label">PENTATONIC</span>
+            </button>
+            <button type="button" id="ferro-toggle" class="hw-key is-active" aria-pressed="true">
+              <span class="key-led" aria-hidden="true"></span>FERROFLUID
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <p class="web-note">
+        <strong>Web audio preview:</strong> browsers can’t access macOS Force Touch haptics directly.
+        Download the native macOS app to play your physical trackpad with your speakers muted.
+      </p>
+
+      <div class="cta-row">
+        <a class="cta-primary" href="https://github.com/mj0lken/xynth-1/releases/latest">
+          <span>Download XYNTH-1 for macOS</span>
+          <span class="cta-meta">v0.2.0 · Apple Silicon &amp; macOS 14+</span>
+        </a>
+        <a class="cta-secondary" href="https://github.com/mj0lken/xynth-1" target="_blank" rel="noopener">
+          View Source on GitHub ↗
+        </a>
+      </div>
+
+      <ul class="spec-strip" aria-label="Key capabilities">
+        <li>5-Finger Polyphony</li>
+        <li>8 Hardware Themes</li>
+        <li>Liquid Magnetic Visualizer</li>
+        <li>Audio Out Recording Mirror</li>
+        <li>Auto-Updates</li>
+        <li>MIT Open Source</li>
+      </ul>
+    </main>
+
+    <footer class="footer">
+      <span>XYNTH-1 · Inspired by <a href="https://github.com/os6/nospeaker" target="_blank" rel="noopener">os6/nospeaker</a></span>
+      <span>Requires a MacBook Force Touch trackpad or Magic Trackpad 2+</span>
+    </footer>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
