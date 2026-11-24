@@ -94,7 +94,7 @@ public enum AppUpdateError: LocalizedError, Sendable {
 /// Zero-dependency GitHub Releases auto-update client & atomic macOS bundle swapper.
 public enum AppUpdateService {
     public static let defaultRepo = "mj0lken/xynth-1"
-    public static let fallbackVersionString = "0.2.0"
+    public static let fallbackVersionString = "0.2.1"
 
     public static var repoURL: URL {
         URL(string: "https://github.com/\(defaultRepo)")!
@@ -137,7 +137,7 @@ public enum AppUpdateService {
         let assets = payload.assets ?? []
         let preferredAsset = assets.first(where: {
             let lower = $0.name.lowercased()
-            return lower.hasSuffix(".zip") && (lower.contains("xynth") || lower.contains("macos"))
+            return lower.hasSuffix(".zip") && (lower.contains("arm64") || lower.contains("xynth") || lower.contains("macos"))
         }) ?? assets.first(where: { $0.name.lowercased().hasSuffix(".zip") })
 
         let zipURL = preferredAsset.flatMap { URL(string: $0.browser_download_url) }

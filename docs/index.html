@@ -3,25 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>XYNTH-1 — Tactile Force Touch Trackpad Synthesizer for macOS</title>
-  <meta name="description" content="Turn your MacBook's Force Touch trackpad into a 5-finger tactile synthesizer. Hear and feel sound directly from the glass — zero speakers used." />
-  <meta property="og:title" content="XYNTH-1 — Tactile Trackpad Synthesizer" />
-  <meta property="og:description" content="Play your MacBook's Force Touch trackpad like a polyphonic XY synthesizer. Zero speakers used." />
+  <title>XYNTH-1 — Tactile Force Touch Trackpad Synthesizer for Apple Silicon</title>
+  <meta name="description" content="Turn your Apple Silicon MacBook's Force Touch trackpad into a 5-finger tactile synthesizer. Hear and feel sound directly from the glass — zero speakers used." />
+  <meta property="og:title" content="XYNTH-1 — Play the glass. Zero speakers." />
+  <meta property="og:description" content="A tactile Apple Silicon macOS synthesizer that turns your Force Touch trackpad into a 5-finger XY instrument." />
   <meta property="og:image" content="icon.png" />
-  <meta name="theme-color" content="#eef0eb" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0b0e14" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f6f2" />
   <link rel="icon" type="image/png" href="icon.png" />
   <link rel="apple-touch-icon" href="icon.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Full-viewport reactive waveform wherever the user moves or touches -->
+  <!-- Full-viewport reactive waveform wherever the visitor moves or touches -->
   <canvas id="ambient-wave" aria-hidden="true"></canvas>
 
   <div class="page-shell">
     <header class="topbar">
       <a class="brand" href="#top" aria-label="XYNTH-1 home">
-        <img src="icon.png" alt="" width="30" height="30" class="brand-icon" />
+        <img src="icon.png" alt="" width="32" height="32" class="brand-icon" />
         <span class="brand-name">XYNTH-1</span>
         <span class="grille" aria-hidden="true">
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -30,104 +29,327 @@
         </span>
       </a>
 
-      <nav class="top-actions" aria-label="Page utilities">
+      <nav class="top-actions" aria-label="Primary navigation">
+        <a class="nav-link" href="#inside">Inside XYNTH-1</a>
+        <a class="nav-link" href="#themes">Themes</a>
         <button id="motion-toggle" type="button" class="util-btn">Pause motion</button>
-        <button id="theme-toggle" type="button" class="util-btn">Dark</button>
         <a class="util-btn" href="https://github.com/mj0lken/xynth-1" target="_blank" rel="noopener">GitHub ↗</a>
       </nav>
     </header>
 
-    <main id="top" class="hero">
-      <div class="hero-copy">
-        <h1>Play the glass.<br /><span class="accent-word">Zero speakers.</span></h1>
-        <p class="subtitle">
-          A tactile macOS synthesizer that drives your MacBook’s Force Touch motor up to 4&nbsp;kHz — hear and feel pitch, volume, and 5-finger chords straight under your fingertips.
-        </p>
-      </div>
-
-      <!-- Simplified playable mini-XYNTH-1 with embedded liquid magnetic ferrofluid -->
-      <section class="synth-chassis" aria-label="Interactive web synthesizer preview">
-        <div class="chassis-stripe" aria-hidden="true">
-          <span></span><span></span><span></span><span></span>
+    <main id="top">
+      <!-- Editorial Hero -->
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="hero-copy">
+          <p class="hero-kicker">MODEL XY-1 · APPLE SILICON · MACOS 14+</p>
+          <h1 id="hero-heading">Play the glass.<br /><span class="accent-word">Zero speakers.</span></h1>
+          <p class="subtitle">
+            XYNTH-1 drives your MacBook’s Force Touch motor directly up to 4&nbsp;kHz — turning the trackpad into a tactile 5-finger synthesizer you hear and feel straight under your fingertips.
+          </p>
         </div>
 
-        <div class="pad-wrap">
-          <div id="pad-surface" class="pad-surface" role="application" tabindex="0"
-               aria-label="Interactive XY touch synthesizer pad. Drag horizontally for pitch and vertically for volume, or use arrow keys.">
-            <canvas id="pad-canvas" aria-hidden="true"></canvas>
-
-            <div class="pad-hud pad-hud-top" aria-hidden="true">
-              <span class="hud-pill" id="pad-status">
-                <span class="led-dot" id="pad-led"></span>
-                <span id="pad-status-text">TOUCH OR DRAG TO PLAY</span>
-              </span>
-              <span class="hud-pill hud-mono" id="pad-readout">— · 0 Hz</span>
+        <!-- Sculptural Interactive Playable Trackpad + Embedded Ferrofluid + Short Demo -->
+        <div class="synth-stage">
+          <div class="synth-chassis" role="region" aria-label="Interactive web synthesizer preview">
+            <div class="chassis-stripe" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
             </div>
 
-            <div class="pad-hud pad-hud-bottom" aria-hidden="true">
-              <span>X → PITCH</span>
-              <span>Y → VOLUME</span>
+            <div class="pad-wrap">
+              <div id="pad-surface" class="pad-surface" role="application" tabindex="0"
+                   aria-label="Interactive XY touch synthesizer pad. Drag horizontally for pitch and vertically for volume, click Play demo, or use arrow keys.">
+                <canvas id="pad-canvas" aria-hidden="true"></canvas>
+
+                <div class="pad-hud pad-hud-top" aria-hidden="true">
+                  <span class="hud-pill" id="pad-status">
+                    <span class="led-dot" id="pad-led"></span>
+                    <span id="pad-status-text">TOUCH, DRAG, OR PRESS PLAY DEMO</span>
+                  </span>
+                  <span class="hud-pill hud-mono" id="pad-readout">— · 0 Hz</span>
+                </div>
+
+                <div class="pad-hud pad-hud-bottom" aria-hidden="true">
+                  <span>X → PITCH</span>
+                  <span>Y → VOLUME</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Minimal Tactile Hardware Strip -->
+            <div class="mini-deck">
+              <div class="control-group" role="group" aria-label="Demo and Timbre">
+                <button type="button" id="demo-toggle" class="hw-key hw-key-demo">
+                  <span class="key-led" aria-hidden="true"></span>
+                  <span id="demo-label">▶ PLAY DEMO</span>
+                </button>
+                <span class="deck-sep" aria-hidden="true"></span>
+                <button type="button" class="hw-key is-active" data-timbre="warm" aria-pressed="true">
+                  <span class="key-led" aria-hidden="true"></span>WARM
+                </button>
+                <button type="button" class="hw-key" data-timbre="sine" aria-pressed="false">
+                  <span class="key-led" aria-hidden="true"></span>SINE
+                </button>
+                <button type="button" class="hw-key" data-timbre="saw" aria-pressed="false">
+                  <span class="key-led" aria-hidden="true"></span>SAW
+                </button>
+                <button type="button" class="hw-key" data-timbre="bell" aria-pressed="false">
+                  <span class="key-led" aria-hidden="true"></span>BELL
+                </button>
+              </div>
+
+              <div class="control-group" role="group" aria-label="Scale and Ferrofluid">
+                <button type="button" id="scale-toggle" class="hw-key is-active" aria-pressed="true">
+                  <span class="key-led" aria-hidden="true"></span><span id="scale-label">PENTATONIC</span>
+                </button>
+                <button type="button" id="ferro-toggle" class="hw-key is-active" aria-pressed="true">
+                  <span class="key-led" aria-hidden="true"></span>FERROFLUID
+                </button>
+              </div>
             </div>
           </div>
+
+          <p class="web-note">
+            <strong>Interactive browser preview:</strong> web pages can’t drive macOS Force Touch haptics directly, so this preview synthesizes through Web Audio. Download the native Apple Silicon app to play your trackpad glass with speakers muted.
+          </p>
         </div>
 
-        <!-- Minimal tactile hardware control strip -->
-        <div class="mini-deck">
-          <div class="control-group" role="group" aria-label="Timbre">
-            <span class="group-label">TIMBRE</span>
-            <button type="button" class="hw-key is-active" data-timbre="warm" aria-pressed="true">
-              <span class="key-led" aria-hidden="true"></span>WARM
-            </button>
-            <button type="button" class="hw-key" data-timbre="sine" aria-pressed="false">
-              <span class="key-led" aria-hidden="true"></span>SINE
-            </button>
-            <button type="button" class="hw-key" data-timbre="saw" aria-pressed="false">
-              <span class="key-led" aria-hidden="true"></span>SAW
-            </button>
-            <button type="button" class="hw-key" data-timbre="bell" aria-pressed="false">
-              <span class="key-led" aria-hidden="true"></span>BELL
-            </button>
-          </div>
-
-          <div class="control-group" role="group" aria-label="Scale and Ferrofluid">
-            <button type="button" id="scale-toggle" class="hw-key is-active" aria-pressed="true">
-              <span class="key-led" aria-hidden="true"></span><span id="scale-label">PENTATONIC</span>
-            </button>
-            <button type="button" id="ferro-toggle" class="hw-key is-active" aria-pressed="true">
-              <span class="key-led" aria-hidden="true"></span>FERROFLUID
-            </button>
-          </div>
+        <div class="cta-row">
+          <a class="cta-primary" href="https://github.com/mj0lken/xynth-1/releases/latest">
+            <span class="cta-title">Download for Apple Silicon</span>
+            <span class="cta-meta">v0.2.1 · arm64 · macOS 14+ · MIT Open Source</span>
+          </a>
+          <a class="cta-secondary" href="https://github.com/mj0lken/xynth-1" target="_blank" rel="noopener">
+            View Source on GitHub ↗
+          </a>
         </div>
       </section>
 
-      <p class="web-note">
-        <strong>Web audio preview:</strong> browsers can’t access macOS Force Touch haptics directly.
-        Download the native macOS app to play your physical trackpad with your speakers muted.
-      </p>
+      <!-- Editorial App Showcase (Replaces Bottom Pills with Stylized Copy + Real App Panels) -->
+      <section id="inside" class="showcase" aria-labelledby="inside-heading">
+        <div class="section-intro">
+          <p class="section-index">INSIDE THE INSTRUMENT</p>
+          <h2 id="inside-heading">Engineered like hardware.<br />Built directly for Apple Silicon.</h2>
+        </div>
 
-      <div class="cta-row">
-        <a class="cta-primary" href="https://github.com/mj0lken/xynth-1/releases/latest">
-          <span>Download XYNTH-1 for macOS</span>
-          <span class="cta-meta">v0.2.0 · Apple Silicon &amp; macOS 14+</span>
-        </a>
-        <a class="cta-secondary" href="https://github.com/mj0lken/xynth-1" target="_blank" rel="noopener">
-          View Source on GitHub ↗
-        </a>
-      </div>
+        <!-- 01: Live OLED Telemetry & 5-Finger Trackpad Polyphony -->
+        <article class="showcase-item">
+          <div class="showcase-card">
+            <div class="showcase-copy">
+              <span class="item-num">01 / FIVE-FINGER POLYPHONY</span>
+              <h3>Hear &amp; feel five fingers on glass.</h3>
+              <p>
+                Every fingertip gets a guaranteed fundamental pitch inside the Force Touch actuator’s six-partial engine, backed by a 32&nbsp;ms anti-flicker grace window so chords hold steady without cutting out.
+              </p>
+              <p class="item-detail">
+                The recessed OLED tracks live note accuracy, an FM-style harmonic operator schematic, real-time composite oscilloscope, and the motor’s tactile <em>FEEL</em> and acoustic <em>SWEET</em> frequency bands.
+              </p>
+            </div>
+            <figure class="panel-frame">
+              <img
+                src="panels/oled-polyphony.png"
+                alt="XYNTH-1 live OLED telemetry bar and 3-finger chord ripples playing A3, E4, and B4 on the glass fingerboard"
+                width="1280"
+                height="467"
+                loading="lazy"
+                decoding="async"
+              />
+              <figcaption>Live OLED telemetry, F1–F5 polyphony bank &amp; 1:1 trackpad mirror during a 3-finger Am9 chord.</figcaption>
+            </figure>
+          </div>
+        </article>
 
-      <ul class="spec-strip" aria-label="Key capabilities">
-        <li>5-Finger Polyphony</li>
-        <li>8 Hardware Themes</li>
-        <li>Liquid Magnetic Visualizer</li>
-        <li>Audio Out Recording Mirror</li>
-        <li>Auto-Updates</li>
-        <li>MIT Open Source</li>
-      </ul>
+        <!-- 02: OP-1 × M-VAVE FM-1 Control Deck -->
+        <article class="showcase-item">
+          <div class="showcase-card">
+            <div class="showcase-copy">
+              <span class="item-num">02 / TACTILE CONTROL DECK</span>
+              <h3>Precision encoders, custom dials, zero stock clutter.</h3>
+              <p>
+                Shape volume, fingertip sub-feel (110–245&nbsp;Hz), portamento glide, overtone brightness, and vibrato LFO using five color-coded rotary encoders — drag, scroll-wheel, or double-click to reset.
+              </p>
+              <p class="item-detail">
+                Switch between seven additive timbres (keys <code>1–7</code>), nine quantized scales or fretless Theremin mode, four frequency bands, and polite hover callouts that vanish the instant you click.
+              </p>
+            </div>
+            <figure class="panel-frame">
+              <img
+                src="panels/control-deck.png"
+                alt="XYNTH-1 hardware control deck showing five color-coded rotary encoders, performance LED keycaps, seven timbres, custom scale dropdowns, and 5-voice bank"
+                width="1280"
+                height="305"
+                loading="lazy"
+                decoding="async"
+              />
+              <figcaption>Color-coded encoders, illuminated LED keycaps, custom themed dropdowns &amp; 1–5 voice selector.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <!-- 03: Interactive 8-Theme Hardware Colorway Switcher -->
+        <article id="themes" class="showcase-item">
+          <div class="showcase-card showcase-card-themes">
+            <div class="showcase-copy">
+              <span class="item-num">03 / EIGHT HARDWARE COLORWAYS</span>
+              <h3>From Dieter White to Neon Cyber in one keystroke.</h3>
+              <p>
+                Press <code>C</code> anytime — even while Play Mode is locked — to transform the entire aluminum chassis, OLED phosphor, LED optics, and encoder caps across eight distinct industrial designs.
+              </p>
+              <div class="theme-picker" role="group" aria-label="Preview XYNTH-1 hardware themes">
+                <button type="button" class="theme-chip is-active" data-preview-theme="op1" aria-pressed="true">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>OP-1 Field
+                </button>
+                <button type="button" class="theme-chip" data-preview-theme="tech80s" aria-pressed="false">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>80s Tech
+                </button>
+                <button type="button" class="theme-chip" data-preview-theme="dieter" aria-pressed="false">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>Dieter White
+                </button>
+                <button type="button" class="theme-chip" data-preview-theme="obsidian" aria-pressed="false">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>Obsidian
+                </button>
+                <button type="button" class="theme-chip" data-preview-theme="neon" aria-pressed="false">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>Neon Cyber
+                </button>
+                <button type="button" class="theme-chip" data-preview-theme="inca" aria-pressed="false">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>Inca Gold
+                </button>
+                <button type="button" class="theme-chip" data-preview-theme="acid" aria-pressed="false">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>Acid Modern
+                </button>
+                <button type="button" class="theme-chip" data-preview-theme="koto" aria-pressed="false">
+                  <span class="chip-swatch" aria-hidden="true"><i></i><i></i><i></i></span>Koto Clay
+                </button>
+              </div>
+            </div>
+
+            <!-- Interactive Stylized Mini XYNTH-1 Faceplate Preview -->
+            <div class="theme-stage" id="theme-preview" data-skin="op1" aria-live="polite">
+              <div class="mini-stripe" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+              <div class="mini-faceplate">
+                <div class="mini-top">
+                  <div class="mini-brand">
+                    <span class="mini-led" aria-hidden="true"></span>
+                    <span>XYNTH-1</span>
+                    <span class="mini-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                  </div>
+                  <span class="mini-tag" id="theme-preview-name">OP-1 FIELD</span>
+                </div>
+
+                <div class="mini-oled">
+                  <div class="mini-oled-left">
+                    <strong>A4</strong>
+                    <span>440.0 Hz · 5V</span>
+                  </div>
+                  <svg class="mini-wave" viewBox="0 0 220 44" aria-hidden="true">
+                    <path d="M2 22 C 18 4, 30 4, 46 22 S 74 40, 90 22 S 118 4, 134 22 S 162 40, 178 22 S 202 8, 218 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+                  </svg>
+                  <div class="mini-oled-leds" aria-hidden="true">
+                    <i class="lit"></i><i class="lit"></i><i class="lit"></i><i></i><i></i>
+                  </div>
+                </div>
+
+                <div class="mini-encoders" aria-hidden="true">
+                  <div class="mini-knob k1"><span></span><label>VOL</label></div>
+                  <div class="mini-knob k2"><span></span><label>SUB</label></div>
+                  <div class="mini-knob k3"><span></span><label>GLIDE</label></div>
+                  <div class="mini-knob k4"><span></span><label>TONE</label></div>
+                  <div class="mini-knob k5"><span></span><label>VIB</label></div>
+                </div>
+
+                <div class="mini-keys" aria-hidden="true">
+                  <span>SINE</span>
+                  <span class="is-lit">WARM</span>
+                  <span>HOLLOW</span>
+                  <span>SAW</span>
+                  <span>BELL</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 04: Ferrofluid Expansion Bay & Recording Mirror -->
+        <article class="showcase-item">
+          <div class="showcase-card showcase-card-ferro">
+            <div class="showcase-copy">
+              <span class="item-num">04 / FERRO-1 MAGNETIC BAY &amp; AUDIO OUT</span>
+              <h3>Snap out a liquid magnetic chamber — and mirror audio for recording.</h3>
+              <p>
+                Toggle <code>FERRO</code> (<code>V</code>) to expand a right-hand modular rack running a 60&nbsp;fps spring-damped ferrofluid solver sculpted directly by your trackpad’s active sine partials in <em>Spikes</em>, <em>Orbit</em>, or <em>Cymatic</em> mode.
+              </p>
+              <p class="item-detail">
+                Need to capture a screen recording? Flip on <strong>Audio Out</strong> (<code>A</code>) to route a phase-continuous CoreAudio mirror straight to speakers, headphones, or BlackHole while the glass keeps resonating.
+              </p>
+              <dl class="micro-specs">
+                <div><dt>MODES</dt><dd>SPIKES · ORBIT · CYMATIC</dd></div>
+                <div><dt>PATCHES</dt><dd>VELVET · SUB BASS · THEREMIN · BELL</dd></div>
+                <div><dt>AUDIO MIRROR</dt><dd>COREAUDIO · BLACKHOLE / OBS</dd></div>
+              </dl>
+            </div>
+            <figure class="panel-frame panel-frame-ferro">
+              <img
+                src="panels/ferrofluid-bay.png"
+                alt="XYNTH-1 right-side FERRO-1 liquid magnetic expansion bay with spiking ferrofluid, MAGNET/VISCOS/LFO knobs, quick tactile patches, and live P1–P6 motor partial bars"
+                width="654"
+                height="1524"
+                loading="lazy"
+                decoding="async"
+              />
+              <figcaption>Expandable FERRO-1 magnetic bay with live P1–P6 actuator partial telemetry.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <!-- 05: 3D-Flip Rear Service Panel -->
+        <article class="showcase-item">
+          <div class="showcase-card">
+            <div class="showcase-copy">
+              <span class="item-num">05 / REAR SERVICE PANEL &amp; AUTO-UPDATES</span>
+              <h3>Flip the chassis over for gestures, updates &amp; motor safety.</h3>
+              <p>
+                Click the top-right gear (<code>⌘,</code>) to 3D-flip XYNTH-1 onto its machined rear service plate. Jump straight to <strong>macOS System Settings → Trackpad → More Gestures</strong> in one click to disable conflicting 4- and 5-finger swipes.
+              </p>
+              <p class="item-detail">
+                Includes zero-dependency GitHub Releases auto-updates and hardware-enforced safety invariants: amplitudes normalized to <code>Σ = 1.0</code>, frequencies clamped within <code>45–4,150 Hz</code>, and max 6 simultaneous partials.
+              </p>
+            </div>
+            <figure class="panel-frame">
+              <img
+                src="panels/rear-service.png"
+                alt="XYNTH-1 Rear Service Panel featuring one-click macOS Multi-Finger Trackpad Settings shortcut, GitHub Releases auto-updater, theme selector, and actuator safety specs"
+                width="1280"
+                height="542"
+                loading="lazy"
+                decoding="async"
+              />
+              <figcaption>3D-flipped Rear Service Panel with 1-click macOS Trackpad Settings deep-link &amp; auto-updater.</figcaption>
+            </figure>
+          </div>
+        </article>
+      </section>
+
+      <!-- Closing Editorial CTA -->
+      <section class="closing-cta" aria-labelledby="closing-heading">
+        <p class="section-index">READY TO PLAY</p>
+        <h2 id="closing-heading">Mute your Mac.<br />Rest your fingers on the glass.</h2>
+        <p class="closing-sub">
+          Built exclusively for Apple Silicon Macs (M1–M5) with a Force Touch trackpad or Magic Trackpad 2/3, running macOS 14 Sonoma or newer.
+        </p>
+        <div class="cta-row">
+          <a class="cta-primary" href="https://github.com/mj0lken/xynth-1/releases/latest">
+            <span class="cta-title">Download XYNTH-1 v0.2.1</span>
+            <span class="cta-meta">Apple Silicon (arm64) · Signed &amp; Open Source</span>
+          </a>
+          <a class="cta-secondary" href="https://github.com/mj0lken/xynth-1#build-from-source" target="_blank" rel="noopener">
+            Build from Source ↗
+          </a>
+        </div>
+      </section>
     </main>
 
     <footer class="footer">
-      <span>XYNTH-1 · Inspired by <a href="https://github.com/os6/nospeaker" target="_blank" rel="noopener">os6/nospeaker</a></span>
-      <span>Requires a MacBook Force Touch trackpad or Magic Trackpad 2+</span>
+      <span>XYNTH-1 · MIT Open Source · Inspired by <a href="https://github.com/os6/nospeaker" target="_blank" rel="noopener">os6/nospeaker</a></span>
+      <span>Apple Silicon · Force Touch Trackpad · macOS 14+</span>
     </footer>
   </div>
 

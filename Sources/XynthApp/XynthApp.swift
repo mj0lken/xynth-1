@@ -19,7 +19,8 @@ struct XynthApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1100, height: 805)
+        .defaultSize(width: 1120, height: 815)
+        .windowResizability(.contentMinSize)
         .commands {
             CommandMenu("Synth") {
                 Button(vm.isPlayModeLocked ? "Unlock Trackpad" : "Lock Trackpad (Play Mode)") {
@@ -69,6 +70,9 @@ struct XynthApp: App {
 
                 Divider()
 
+                Button("Play Short Glass Demo") {
+                    vm.triggerShortDemo()
+                }
                 Button("Play Frequency Sweep (98 Hz – 3.6 kHz)") {
                     vm.triggerSweepDemo()
                 }
@@ -95,7 +99,14 @@ final class XynthAppDelegate: NSObject, NSApplicationDelegate {
                 window.isOpaque = true
                 window.titlebarAppearsTransparent = true
                 window.isMovableByWindowBackground = false
-                window.minSize = NSSize(width: 980, height: 740)
+                window.minSize = NSSize(width: 1000, height: 760)
+                // Guard against oversized/restored frames from earlier layout bugs
+                var frame = window.frame
+                if frame.width > 1280 || frame.height > 920 || frame.height < 760 {
+                    frame.size = NSSize(width: 1120, height: 815)
+                    window.setFrame(frame, display: true)
+                    window.center()
+                }
             }
         }
     }
@@ -121,22 +132,29 @@ struct XynthMainView: View {
             chassisBackground
                 .ignoresSafeArea()
 
-            // 3D Hardware Flip Container: Front Synth Faceplate <-> Rear Service Panel (Settings)
+            // 3D Hardware Flip Container: Front Synth Faceplate (0° -> 180°) <-> Rear Service Panel (-180° -> 0°)
+            // Rotating each face independently ensures the active Rear Panel settles at a clean 0° identity transform (zero mirroring).
             ZStack {
                 frontFaceplateView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .rotation3DEffect(
+                        .degrees(vm.showSettings ? 180 : 0),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.42
+                    )
                     .opacity(vm.showSettings ? 0.0 : 1.0)
                     .allowsHitTesting(!vm.showSettings)
 
                 SettingsFlipView(vm: vm)
-                    .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .rotation3DEffect(
+                        .degrees(vm.showSettings ? 0 : -180),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.42
+                    )
                     .opacity(vm.showSettings ? 1.0 : 0.0)
                     .allowsHitTesting(vm.showSettings)
             }
-            .rotation3DEffect(
-                .degrees(vm.showSettings ? 180 : 0),
-                axis: (x: 0, y: 1, z: 0),
-                perspective: 0.42
-            )
             .animation(.spring(response: 0.56, dampingFraction: 0.80), value: vm.showSettings)
             .padding(.horizontal, 16)
             .padding(.top, 26)
@@ -149,6 +167,12 @@ struct XynthMainView: View {
             // Non-blocking, click-dismissed styled floating hover tooltip
             StyledHoverTooltipOverlay(palette: p, helpState: vm.hoverHelp)
         }
+        .frame(
+            minWidth: vm.showExpansionBay ? 1310 : 1000,
+            maxWidth: .infinity,
+            minHeight: 750,
+            maxHeight: .infinity
+        )
         .coordinateSpace(name: "xynthRoot")
         .environment(vm.hoverHelp)
         .onContinuousHover { phase in
@@ -162,20 +186,25 @@ struct XynthMainView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 10) {
                 HeaderBarView(vm: vm)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 // Recessed OP-1 × FM-1 Graphic OLED Telemetry Display
                 WaveformScopeView(vm: vm)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                // Centerpiece 1:1 Tactile Glass Fingerboard (up to 5 fingers)
+                // Centerpiece 1:1 Tactile Glass Fingerboard (fills exact remaining middle height)
                 TrackpadSurfaceView(vm: vm)
-                    .layoutPriority(1)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 // OP-1 × FM-1 Encoders, Mode LED Keycaps, Timbres & 5-Voice Strip
                 ControlDeckView(vm: vm)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 // Minimal silkscreened chassis shortcut footer
                 silkscreenFooter
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if vm.showExpansionBay {
                 FerrofluidExpansionBayView(vm: vm)

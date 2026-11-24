@@ -310,7 +310,7 @@ struct XynthCoreTests {
         #expect(AppVersion(parsing: "0.2.0") == v1)
     }
 
-    @Test("GitHub release JSON parser extracts latest macOS zip asset")
+    @Test("GitHub release JSON parser prefers Apple Silicon arm64 zip asset")
     func gitHubReleaseParsing() {
         let json = """
         {
@@ -321,8 +321,8 @@ struct XynthCoreTests {
           "published_at": "2026-11-23T22:00:00Z",
           "assets": [
             {
-              "name": "XYNTH-1-v0.3.0-macos.zip",
-              "browser_download_url": "https://github.com/mj0lken/xynth-1/releases/download/v0.3.0/XYNTH-1-v0.3.0-macos.zip"
+              "name": "XYNTH-1-v0.3.0-arm64.zip",
+              "browser_download_url": "https://github.com/mj0lken/xynth-1/releases/download/v0.3.0/XYNTH-1-v0.3.0-arm64.zip"
             }
           ]
         }
@@ -331,6 +331,26 @@ struct XynthCoreTests {
         let info = AppUpdateService.parseGitHubReleaseJSON(json)
         #expect(info != nil)
         #expect(info?.version == AppVersion(major: 0, minor: 3, patch: 0))
-        #expect(info?.zipAssetURL?.lastPathComponent == "XYNTH-1-v0.3.0-macos.zip")
+        #expect(info?.zipAssetURL?.lastPathComponent == "XYNTH-1-v0.3.0-arm64.zip")
+    }
+
+    @Test("Short glass demo synthesizes bounded safe tones and cancels cleanly")
+    func shortDemoLifecycle() async throws {
+        let mock = MockActuator()
+        let engine = HapticSynthEngine(actuator: mock, audioMirror: nil)
+        engine.start()
+        defer { engine.stop() }
+
+        engine.triggerShortDemo()
+        try await Task.sleep(for: .milliseconds(140))
+
+        let snap = engine.snapshot()
+        #expect(snap.isSounding == true)
+        #expect(snap.demoLabel?.contains("DEMO") == true)
+        #expect(!snap.outputTones.isEmpty)
+        let ampSum = snap.outputTones.reduce(0.0) { $0 + $1.amp }
+        #expect(abs(ampSum - 1.0) < 0.01)
+
+        engine.cancelDemo()
     }
 }

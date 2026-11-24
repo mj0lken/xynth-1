@@ -160,7 +160,9 @@ struct HardwareKeyButton: View {
                         isHovered: isHovered
                     )
                     if let shortcut, !shortcut.isEmpty {
-                        Spacer(minLength: 2)
+                        if fullWidth {
+                            Spacer(minLength: 2)
+                        }
                         Text(shortcut)
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundStyle((isActive || isHovered) ? ledColor : palette.keycapMutedInk)
@@ -183,6 +185,7 @@ struct HardwareKeyButton: View {
             .frame(maxWidth: fullWidth ? .infinity : nil)
             .padding(.horizontal, compact ? 8 : 11)
             .padding(.vertical, compact ? 6 : 7)
+            .fixedSize(horizontal: !fullWidth, vertical: true)
         }
         .buttonStyle(
             KeycapPressStyle(

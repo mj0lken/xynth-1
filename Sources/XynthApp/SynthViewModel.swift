@@ -38,7 +38,7 @@ final class SynthViewModel {
     private(set) var isInstallingUpdate: Bool = false
     private(set) var availableUpdate: AppReleaseInfo? = nil
     private(set) var updateStatusHeadline: String = "READY TO CHECK"
-    private(set) var updateStatusDetail: String = "Checks GitHub Releases (mj0lken/xynth-1) for signed macOS updates."
+    private(set) var updateStatusDetail: String = "Checks GitHub Releases (mj0lken/xynth-1) for Apple Silicon macOS updates."
 
     // MARK: - Expandable Side Bay (Ferrofluid Liquid Magnetic Visualizer)
     var showExpansionBay: Bool = false
@@ -374,6 +374,10 @@ final class SynthViewModel {
 
     func triggerHeartbeatDemo() {
         engine.triggerHeartbeatDemo()
+    }
+
+    func triggerShortDemo() {
+        engine.triggerShortDemo()
     }
 
     func reconnectTrackpad(deviceID: UInt64? = nil) {

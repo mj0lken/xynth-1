@@ -84,17 +84,17 @@ struct HeaderBarView: View {
                     )
 
                     HardwareKeyButton(
-                        title: "CHORD",
-                        isActive: vm.snapshot.demoLabel?.contains("CHORD") == true,
+                        title: "DEMO",
+                        isActive: vm.snapshot.demoLabel?.contains("DEMO") == true,
                         ledColor: p.enc4,
                         palette: p,
                         compact: true
                     ) {
-                        vm.triggerArpeggioDemo()
+                        vm.triggerShortDemo()
                     }
                     .xynthHelp(
-                        "Chord Check",
-                        detail: "Plays an ascending A-minor 9 arpeggio directly through the Force Touch motor."
+                        "Short Musical Demo",
+                        detail: "Plays a 4.6-second melodic & 3-finger chord riff directly through the Force Touch trackpad glass."
                     )
 
                     HardwareKeyButton(

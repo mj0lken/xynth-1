@@ -82,7 +82,7 @@ struct SettingsFlipView: View {
                     .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                     .foregroundStyle(p.inkMuted)
                 Spacer()
-                Text("DESIGNED FOR MACOS 14+ · INSPIRED BY OS6/NOSPEAKER")
+                Text("APPLE SILICON · MACOS 14+ · INSPIRED BY OS6/NOSPEAKER")
                     .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                     .foregroundStyle(p.inkMuted)
             }

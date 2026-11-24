@@ -198,7 +198,7 @@ struct FerrofluidExpansionBayView: View {
                     .padding(10)
                     .allowsHitTesting(false)
                 }
-                .frame(height: 256)
+                .frame(minHeight: 210, idealHeight: 244, maxHeight: .infinity)
                 .overlay(
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
                         .strokeBorder(

@@ -65,7 +65,7 @@ struct TrackpadSurfaceView: View {
             )
             .frame(width: geo.size.width, height: geo.size.height)
         }
-        .frame(minHeight: 245)
+        .frame(minHeight: 205, idealHeight: 260, maxHeight: .infinity)
     }
 
     private var borderColor: Color {
