@@ -9,13 +9,20 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test-and-build:
     name: Test & Build Apple Silicon (arm64)
-    runs-on: macos-15
+    runs-on: macos-26
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Print toolchain info
         run: |
@@ -32,9 +39,10 @@ jobs:
           bash -n scripts/release.sh
           bash -n scripts/run.sh
 
-      - name: Build Apple Silicon release bundle & archive
+      - name: Build & verify Apple Silicon release bundle
         run: |
           ./scripts/build-app.sh release --zip
+          codesign --verify --deep --strict build/XYNTH-1.app
           ARCHS="$(lipo -archs build/XYNTH-1.app/Contents/MacOS/XYNTH-1)"
           echo "Built architectures: ${ARCHS}"
           test "${ARCHS}" = "arm64"
