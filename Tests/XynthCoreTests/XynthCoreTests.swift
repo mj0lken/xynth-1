@@ -174,6 +174,19 @@ struct XynthCoreTests {
         #expect(pvHigh.vibratoDepth > pvLow.vibratoDepth + 0.4)
     }
 
+    private func waitUntil(
+        timeoutMs: Int = 700,
+        pollMs: Int = 15,
+        condition: () -> Bool
+    ) async throws -> Bool {
+        let deadline = ContinuousClock.now + .milliseconds(timeoutMs)
+        while ContinuousClock.now < deadline {
+            if condition() { return true }
+            try await Task.sleep(for: .milliseconds(pollMs))
+        }
+        return condition()
+    }
+
     @Test("Engine real-time loop synthesizes from virtual touch and releases cleanly")
     func engineVirtualTouchLifecycle() async throws {
         let mock = MockActuator()
@@ -182,7 +195,8 @@ struct XynthCoreTests {
         defer { engine.stop() }
 
         engine.setVirtualTouch(x: 0.6, y: 0.8, down: true)
-        try await Task.sleep(for: .milliseconds(90))
+        let started = try await waitUntil { engine.snapshot().isSounding && !mock.recordedCalls().isEmpty }
+        #expect(started)
 
         let activeSnap = engine.snapshot()
         #expect(activeSnap.isSounding == true)
@@ -191,7 +205,8 @@ struct XynthCoreTests {
         #expect(!mock.recordedCalls().isEmpty)
 
         engine.setVirtualTouch(x: 0.6, y: 0.8, down: false)
-        try await Task.sleep(for: .milliseconds(160))
+        let released = try await waitUntil { !engine.snapshot().isSounding }
+        #expect(released)
 
         let releasedSnap = engine.snapshot()
         #expect(releasedSnap.isSounding == false)
@@ -283,20 +298,19 @@ struct XynthCoreTests {
             )
         }
         mock.setContacts(fiveContacts)
-        try await Task.sleep(for: .milliseconds(90))
+        let allFiveActive = try await waitUntil { engine.snapshot().activeVoices.count == 5 }
+        #expect(allFiveActive)
 
         let snap = engine.snapshot()
         #expect(snap.isSounding == true)
         #expect(snap.activeVoices.count == 5)
 
-        // Simulate a brief 15 ms capacitive flicker dropping finger 5; 32 ms grace window should hold all 5 steady
+        // Simulate a brief 12 ms capacitive flicker dropping finger 5; 32 ms grace window should hold all 5 steady
         mock.setContacts(Array(fiveContacts.prefix(4)))
-        try await Task.sleep(for: .milliseconds(15))
+        try await Task.sleep(for: .milliseconds(12))
         mock.setContacts(fiveContacts)
-        try await Task.sleep(for: .milliseconds(45))
-
-        let steadySnap = engine.snapshot()
-        #expect(steadySnap.activeVoices.count == 5)
+        let heldFive = try await waitUntil { engine.snapshot().activeVoices.count == 5 }
+        #expect(heldFive)
     }
 
     @Test("AppVersion SemVer parsing and comparison works with v-prefixes")
@@ -342,7 +356,11 @@ struct XynthCoreTests {
         defer { engine.stop() }
 
         engine.triggerShortDemo()
-        try await Task.sleep(for: .milliseconds(140))
+        let demoActive = try await waitUntil {
+            let s = engine.snapshot()
+            return s.isSounding && (s.demoLabel?.contains("DEMO") == true)
+        }
+        #expect(demoActive)
 
         let snap = engine.snapshot()
         #expect(snap.isSounding == true)

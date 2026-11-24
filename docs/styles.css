@@ -84,11 +84,11 @@ body::before {
   min-block-size: 100dvh;
   max-inline-size: 1080px;
   margin-inline: auto;
-  padding-block: 22px 34px;
+  padding-block: 18px 34px;
   padding-inline: clamp(18px, 3.6vw, 36px);
   display: flex;
   flex-direction: column;
-  gap: clamp(40px, 6vw, 72px);
+  gap: clamp(24px, 3.6vw, 44px);
 }
 
 /* Header */
@@ -276,7 +276,7 @@ h1 {
 .pad-surface {
   position: relative;
   inline-size: 100%;
-  aspect-ratio: 16 / 9.4;
+  aspect-ratio: 16 / 8.4;
   border-radius: 14px;
   background: linear-gradient(180deg, var(--pad-top) 0%, var(--pad-bottom) 100%);
   border: 1.5px solid color-mix(in oklab, var(--accent-cyan) 34%, #10151e);
@@ -649,7 +649,7 @@ h3 {
 }
 
 .panel-frame-ferro {
-  max-inline-size: 360px;
+  max-inline-size: 280px;
   margin-inline: auto;
 }
 
