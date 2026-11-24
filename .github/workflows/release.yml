@@ -1,0 +1,123 @@
+name: Release (Apple Silicon)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.2.2)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release-arm64:
+    name: Build, Sign, Notarize & Publish (arm64)
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run unit tests
+        run: swift test --parallel
+
+      - name: Detect Apple Developer signing secrets
+        id: signing
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          if [[ -n "$MACOS_CERT_P12_BASE64" && -n "$MACOS_CERT_PASSWORD" ]]; then
+            echo "can_sign=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "can_sign=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -n "$APPLE_ID" && -n "$APPLE_TEAM_ID" && -n "$APPLE_APP_SPECIFIC_PASSWORD" ]]; then
+            echo "can_notarize=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "can_notarize=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Import Developer ID certificate into ephemeral keychain
+        if: steps.signing.outputs.can_sign == 'true'
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/xynth-signing.keychain-db"
+          KEYCHAIN_PASS="$(uuidgen)"
+          CERT_PATH="$RUNNER_TEMP/dev-id.p12"
+
+          printf '%s' "$MACOS_CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$MACOS_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+          echo "NOTARY_KEYCHAIN=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          rm -f "$CERT_PATH"
+
+      - name: Store Apple notarytool credentials
+        if: steps.signing.outputs.can_sign == 'true' && steps.signing.outputs.can_notarize == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials "xynth-1" \
+            --keychain "$NOTARY_KEYCHAIN" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD"
+
+      - name: Build & package Apple Silicon app
+        run: |
+          if [[ "${{ steps.signing.outputs.can_sign }}" == "true" && "${{ steps.signing.outputs.can_notarize }}" == "true" ]]; then
+            ./scripts/build-app.sh release --sign --notarize --zip
+          elif [[ "${{ steps.signing.outputs.can_sign }}" == "true" ]]; then
+            ./scripts/build-app.sh release --sign --zip
+          else
+            ./scripts/build-app.sh release --zip
+          fi
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          ZIP_FILE="$(ls dist/XYNTH-1-v*-arm64.zip | head -n 1)"
+          SHA_FILE="${ZIP_FILE}.sha256"
+          SHA_VAL="$(cut -d' ' -f1 "$SHA_FILE")"
+
+          if [[ "${{ steps.signing.outputs.can_sign }}" == "true" && "${{ steps.signing.outputs.can_notarize }}" == "true" ]]; then
+            SIGN_NOTE="Developer ID signed (Hardened Runtime) & Apple notarized (stapled, Gatekeeper-ready)."
+          elif [[ "${{ steps.signing.outputs.can_sign }}" == "true" ]]; then
+            SIGN_NOTE="Developer ID signed (Hardened Runtime; notarization secrets not configured)."
+          else
+            SIGN_NOTE="Ad-hoc signed Apple Silicon (\`arm64\`) build — right-click \`XYNTH-1.app\` → **Open** on first launch."
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP_FILE" "$SHA_FILE" --clobber
+          else
+            gh release create "$TAG" "$ZIP_FILE" "$SHA_FILE" \
+              --title "XYNTH-1 ${TAG} (Apple Silicon)" \
+              --generate-notes \
+              --notes "Apple Silicon (\`arm64\`, macOS 14+) release of **XYNTH-1**.
+
+- ${SIGN_NOTE}
+- SHA-256: \`${SHA_VAL}\`"
+          fi
+
+      - name: Clean up ephemeral keychain
+        if: always() && steps.signing.outputs.can_sign == 'true'
+        run: security delete-keychain "$RUNNER_TEMP/xynth-signing.keychain-db" || true

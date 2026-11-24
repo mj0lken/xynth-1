@@ -139,7 +139,11 @@ fi
 
 if [[ "$DO_NOTARIZE" == true ]]; then
   PROFILE="${NOTARY_PROFILE:-xynth-1}"
-  if ! xcrun notarytool history --keychain-profile "$PROFILE" >/dev/null 2>&1; then
+  NOTARY_ARGS=(--keychain-profile "$PROFILE")
+  if [[ -n "${NOTARY_KEYCHAIN:-}" ]]; then
+    NOTARY_ARGS+=(--keychain "$NOTARY_KEYCHAIN")
+  fi
+  if ! xcrun notarytool history "${NOTARY_ARGS[@]}" >/dev/null 2>&1; then
     fail "No saved notarytool keychain profile named \"${PROFILE}\".
   Save your Apple Developer credentials once (use an App-Specific Password from account.apple.com):
 
@@ -149,7 +153,7 @@ if [[ "$DO_NOTARIZE" == true ]]; then
   fi
 
   echo "Submitting ${ZIP_PATH} to Apple Notary Service (profile: ${PROFILE})..."
-  xcrun notarytool submit "$ZIP_PATH" --keychain-profile "$PROFILE" --wait \
+  xcrun notarytool submit "$ZIP_PATH" "${NOTARY_ARGS[@]}" --wait \
     || fail "Notarization failed. Inspect logs with: xcrun notarytool log <submission-id> --keychain-profile ${PROFILE}"
 
   echo "Stapling notarization ticket to ${APP_NAME}.app..."

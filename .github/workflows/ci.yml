@@ -1,0 +1,60 @@
+name: CI (Apple Silicon)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: Test & Build Apple Silicon (arm64)
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Print toolchain info
+        run: |
+          uname -m
+          sw_vers
+          swift --version
+
+      - name: Run unit tests
+        run: swift test --parallel
+
+      - name: Validate scripts syntax
+        run: |
+          bash -n scripts/build-app.sh
+          bash -n scripts/release.sh
+          bash -n scripts/run.sh
+
+      - name: Build Apple Silicon release bundle & archive
+        run: |
+          ./scripts/build-app.sh release --zip
+          ARCHS="$(lipo -archs build/XYNTH-1.app/Contents/MacOS/XYNTH-1)"
+          echo "Built architectures: ${ARCHS}"
+          test "${ARCHS}" = "arm64"
+
+      - name: Verify landing page assets
+        run: |
+          test -f docs/index.html
+          test -f docs/styles.css
+          test -f docs/app.js
+          test -f docs/icon.png
+          test -f docs/panels/oled-polyphony.png
+          test -f docs/panels/control-deck.png
+          test -f docs/panels/ferrofluid-bay.png
+          test -f docs/panels/rear-service.png
+
+      - name: Upload built arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: XYNTH-1-arm64-ci
+          path: |
+            dist/XYNTH-1-v*-arm64.zip
+            dist/XYNTH-1-v*-arm64.zip.sha256
+          retention-days: 14

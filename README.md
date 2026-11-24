@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/mj0lken/xynth-1/actions/workflows/ci.yml"><img src="https://github.com/mj0lken/xynth-1/actions/workflows/ci.yml/badge.svg" alt="CI (Apple Silicon)" /></a>
+</p>
+
+<p align="center">
   <a href="https://mj0lken.github.io/xynth-1/">Live Web Preview &amp; Demo</a> ·
   <a href="https://github.com/mj0lken/xynth-1/releases/latest">Download for Apple Silicon</a> ·
   <a href="#keyboard-shortcuts">Shortcuts</a> ·
@@ -79,6 +83,15 @@ To package an ad-hoc build without a Developer ID certificate:
 ```bash
 ./scripts/release.sh --unsigned
 ```
+
+### Automated GitHub Actions Releases
+Pushing a semantic tag (`git tag v0.2.2 && git push origin v0.2.2`) triggers [`.github/workflows/release.yml`](.github/workflows/release.yml) on an Apple Silicon (`macos-15`) runner. To enable automatic Developer ID signing & Apple notarization in CI, add these Repository Secrets under *Settings → Secrets and variables → Actions*:
+
+- `MACOS_CERT_P12_BASE64` — Base64-encoded Developer ID Application `.p12` certificate (`base64 -i cert.p12 | pbcopy`)
+- `MACOS_CERT_PASSWORD` — Password protecting the `.p12` export
+- `APPLE_ID` — Apple Developer account email
+- `APPLE_TEAM_ID` — 10-character Apple Developer Team ID
+- `APPLE_APP_SPECIFIC_PASSWORD` — App-Specific Password from [account.apple.com](https://account.apple.com)
 
 ---
 
