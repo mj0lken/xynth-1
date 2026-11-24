@@ -109,13 +109,10 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP_FILE" "$SHA_FILE" --clobber
           else
+            RELEASE_NOTES=$(printf 'Apple Silicon (`arm64`, macOS 14+) release of **XYNTH-1**.\n\n- %s\n- SHA-256: `%s`\n' "$SIGN_NOTE" "$SHA_VAL")
             gh release create "$TAG" "$ZIP_FILE" "$SHA_FILE" \
               --title "XYNTH-1 ${TAG} (Apple Silicon)" \
-              --generate-notes \
-              --notes "Apple Silicon (\`arm64\`, macOS 14+) release of **XYNTH-1**.
-
-- ${SIGN_NOTE}
-- SHA-256: \`${SHA_VAL}\`"
+              --notes "$RELEASE_NOTES"
           fi
 
       - name: Clean up ephemeral keychain
