@@ -2,13 +2,13 @@
 # Builds XYNTH-1.app for Apple Silicon (arm64) only.
 #
 # Usage:
-#   ./scripts/build-app.sh [debug|release] [--zip] [--sign] [--notarize]
+#   ./scripts/build-app.sh [debug|release] [--zip] [--sign] [--notarize] [--install]
 #
-# Environment variables (for signed & notarized releases):
-#   SIGN_IDENTITY   Optional explicit "Developer ID Application: ..." identity.
-#                   Defaults to the first valid Developer ID Application cert in Keychain.
-#   NOTARY_PROFILE  Keychain profile created with `xcrun notarytool store-credentials`.
-#                   Defaults to "xynth-1".
+# Environment variables:
+#   VERSION           Bundle version (defaults to latest v* git tag, fallback 0.2.1).
+#   BUILD_NUMBER      Bundle build number (defaults to git rev-list --count HEAD).
+#   SIGNING_IDENTITY  Signing identity ("-" for ad-hoc, or "Developer ID Application: ...").
+#   NOTARY_PROFILE    Keychain profile created with `xcrun notarytool store-credentials` (default: xynth-1).
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,6 +18,7 @@ CONFIG="release"
 DO_ZIP=false
 DO_SIGN=false
 DO_NOTARIZE=false
+DO_INSTALL=false
 
 for arg in "$@"; do
   case "$arg" in
@@ -25,6 +26,7 @@ for arg in "$@"; do
     --zip)         DO_ZIP=true ;;
     --sign)        DO_SIGN=true ;;
     --notarize)    DO_NOTARIZE=true; DO_SIGN=true; DO_ZIP=true ;;
+    --install)     DO_INSTALL=true ;;
     -h|--help)
       sed -n '2,12p' "$0"
       exit 0
@@ -37,8 +39,8 @@ for arg in "$@"; do
 done
 
 APP_NAME="XYNTH-1"
-VERSION="0.2.1"
-BUILD_NUMBER="3"
+VERSION="${VERSION:-$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//' || echo 0.2.1)}"
+BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
 ARCH="arm64"
 APP_DIR="$ROOT_DIR/build/${APP_NAME}.app"
 CONTENTS="$APP_DIR/Contents"
@@ -53,7 +55,7 @@ fail() {
 
 [[ "$(uname -s)" == "Darwin" ]] || fail "XYNTH-1 builds on macOS only."
 
-echo "Building ${APP_NAME} v${VERSION} (${CONFIG}, Apple Silicon ${ARCH} only)..."
+echo "Building ${APP_NAME} v${VERSION} (${BUILD_NUMBER}, ${CONFIG}, Apple Silicon ${ARCH} only)..."
 swift build -c "$CONFIG" --arch "$ARCH"
 
 BIN_DIR="$(swift build -c "$CONFIG" --arch "$ARCH" --show-bin-path)"
@@ -113,21 +115,22 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 </plist>
 PLIST
 
-if [[ "$DO_SIGN" == true ]]; then
-  IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -n 1)}"
+IDENTITY="${SIGNING_IDENTITY:-${SIGN_IDENTITY:-}}"
+if [[ -z "$IDENTITY" && "$DO_SIGN" == true ]]; then
+  IDENTITY="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -n 1)"
   if [[ -z "$IDENTITY" ]]; then
-    fail "No 'Developer ID Application' certificate found in Keychain.
-  1. Open Xcode -> Settings -> Accounts -> your Apple Developer Team -> Manage Certificates -> '+' -> Developer ID Application.
-  2. Re-run: ./scripts/build-app.sh release --sign --notarize --zip"
+    fail "No 'Developer ID Application' certificate found in Keychain."
   fi
+fi
 
+if [[ -n "$IDENTITY" && "$IDENTITY" != "-" ]]; then
   echo "Signing ${APP_NAME}.app with Hardened Runtime (${IDENTITY})..."
   codesign --force --deep --options runtime --timestamp --sign "$IDENTITY" "$APP_DIR"
-  codesign --verify --deep --strict --verbose=2 "$APP_DIR"
 else
   echo "Ad-hoc signing ${APP_NAME}.app for local Apple Silicon execution..."
-  codesign --force --deep --sign - "$APP_DIR" >/dev/null 2>&1 || true
+  codesign --force --deep --sign - "$APP_DIR"
 fi
+codesign --verify --deep --strict "$APP_DIR"
 
 echo "Built bundle: $APP_DIR (arch: ${BUILT_ARCHS})"
 
@@ -144,12 +147,7 @@ if [[ "$DO_NOTARIZE" == true ]]; then
     NOTARY_ARGS+=(--keychain "$NOTARY_KEYCHAIN")
   fi
   if ! xcrun notarytool history "${NOTARY_ARGS[@]}" >/dev/null 2>&1; then
-    fail "No saved notarytool keychain profile named \"${PROFILE}\".
-  Save your Apple Developer credentials once (use an App-Specific Password from account.apple.com):
-
-    xcrun notarytool store-credentials ${PROFILE} --apple-id <your-apple-id> --team-id <your-team-id>
-
-  Then re-run: ./scripts/build-app.sh release --notarize"
+    fail "No saved notarytool keychain profile named \"${PROFILE}\"."
   fi
 
   echo "Submitting ${ZIP_PATH} to Apple Notary Service (profile: ${PROFILE})..."
@@ -161,14 +159,26 @@ if [[ "$DO_NOTARIZE" == true ]]; then
   xcrun stapler validate "$APP_DIR"
   spctl --assess --type execute -vv "$APP_DIR"
 
-  # Re-pack the stapled bundle so users can launch offline without Gatekeeper warning
   rm -f "$ZIP_PATH"
   ditto -c -k --sequesterRsrc --keepParent "$APP_DIR" "$ZIP_PATH"
 fi
 
 if [[ "$DO_ZIP" == true ]]; then
-  shasum -a 256 "$ZIP_PATH" | tee "${ZIP_PATH}.sha256"
+  SHA="$(shasum -a 256 "$ZIP_PATH" | cut -d' ' -f1)"
+  echo "${SHA}  $(basename "$ZIP_PATH")" | tee "${ZIP_PATH}.sha256"
   echo "Packaged Apple Silicon ZIP: $ZIP_PATH"
 fi
 
-echo "Launch with:  open \"$APP_DIR\""
+if [[ "$DO_INSTALL" == true ]]; then
+  if pgrep -x "$APP_NAME" >/dev/null; then
+    osascript -e 'quit app id "com.xynth1.hapticsynth"' 2>/dev/null || true
+    for _ in 1 2 3 4 5; do pgrep -x "$APP_NAME" >/dev/null || break; sleep 1; done
+    pkill -x "$APP_NAME" 2>/dev/null || true
+  fi
+  rm -rf "/Applications/${APP_NAME}.app"
+  cp -R "$APP_DIR" /Applications/
+  echo "Installed to /Applications/${APP_NAME}.app"
+  open "/Applications/${APP_NAME}.app"
+else
+  echo "Launch with:  open \"$APP_DIR\""
+fi

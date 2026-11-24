@@ -16,12 +16,16 @@ struct TouchTrailPoint: Identifiable {
 final class SynthViewModel {
     private static let themeDefaultsKey = "com.xynth1.selectedTheme"
     private static let autoUpdateDefaultsKey = "com.xynth1.autoCheckUpdates"
+    private static let lastUpdateCheckDefaultsKey = "com.xynth1.lastUpdateCheck"
+    private nonisolated static let lastUpdateETagDefaultsKey = "com.xynth1.lastReleaseETag"
     private static let tooltipsDefaultsKey = "com.xynth1.hoverTooltipsEnabled"
 
     private let engine: HapticSynthEngine
     let cursorLock: CursorLockController
     let hoverHelp = HoverHelpState()
     let ferroPhysics = FerrofluidPhysics()
+    @ObservationIgnored private var updateLoopTask: Task<Void, Never>?
+    @ObservationIgnored private var wakeObserver: NSObjectProtocol?
 
     // MARK: - Rear Settings Flip Panel & Auto-Updater
     var showSettings: Bool = false
@@ -169,12 +173,33 @@ final class SynthViewModel {
         startTimers()
         applyWindowTheme()
 
-        if autoCheckUpdatesOnLaunch {
-            Task { [weak self] in
-                try? await Task.sleep(for: .seconds(2))
-                self?.checkForUpdates(userInitiated: false)
+        startUpdateScheduler()
+    }
+
+    private func startUpdateScheduler() {
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.checkForUpdatesIfDue()
             }
         }
+        updateLoopTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            while !Task.isCancelled {
+                self?.checkForUpdatesIfDue()
+                try? await Task.sleep(for: .seconds(AppUpdateService.checkInterval))
+            }
+        }
+    }
+
+    private func checkForUpdatesIfDue() {
+        guard autoCheckUpdatesOnLaunch else { return }
+        let lastCheck = UserDefaults.standard.object(forKey: Self.lastUpdateCheckDefaultsKey) as? Date
+        guard AppUpdateService.isDue(lastCheck: lastCheck) else { return }
+        checkForUpdates(userInitiated: false)
     }
 
     func toggleSettingsFlip() {
@@ -208,22 +233,39 @@ final class SynthViewModel {
             updateStatusHeadline = "CHECKING GITHUB RELEASES…"
             updateStatusDetail = "Querying \(AppUpdateService.defaultRepo) for the latest macOS build."
         }
+        let defaults = UserDefaults.standard
+        let etag = (availableUpdate != nil || defaults.object(forKey: Self.lastUpdateCheckDefaultsKey) != nil)
+            ? defaults.string(forKey: Self.lastUpdateETagDefaultsKey)
+            : nil
         Task { [weak self] in
-            let result = await AppUpdateService.checkLatestRelease()
+            let result = await AppUpdateService.checkLatestRelease(etag: etag) { newETag in
+                UserDefaults.standard.set(newETag, forKey: Self.lastUpdateETagDefaultsKey)
+            }
             guard let self else { return }
             self.isCheckingUpdates = false
             switch result {
             case .updateAvailable(let current, let release):
+                UserDefaults.standard.set(Date(), forKey: Self.lastUpdateCheckDefaultsKey)
                 self.availableUpdate = release
                 self.updateStatusHeadline = "UPDATE AVAILABLE · \(release.tagName)"
                 self.updateStatusDetail = release.notes.isEmpty
                     ? "New release \(release.tagName) is ready (installed: v\(current))."
                     : String(release.notes.prefix(160))
             case .upToDate(let current, let latest):
+                UserDefaults.standard.set(Date(), forKey: Self.lastUpdateCheckDefaultsKey)
                 self.availableUpdate = nil
                 self.updateStatusHeadline = "UP TO DATE · v\(current)"
                 self.updateStatusDetail = "You're running the latest release (v\(latest)) of XYNTH-1."
+            case .notModified(let current):
+                UserDefaults.standard.set(Date(), forKey: Self.lastUpdateCheckDefaultsKey)
+                if let release = self.availableUpdate {
+                    self.updateStatusHeadline = "UPDATE AVAILABLE · \(release.tagName)"
+                } else {
+                    self.updateStatusHeadline = "UP TO DATE · v\(current)"
+                    self.updateStatusDetail = "You're running the latest release (v\(current)) of XYNTH-1."
+                }
             case .noReleasesPublished(let current):
+                UserDefaults.standard.set(Date(), forKey: Self.lastUpdateCheckDefaultsKey)
                 self.availableUpdate = nil
                 self.updateStatusHeadline = "CURRENT · v\(current)"
                 self.updateStatusDetail = "No newer GitHub releases published yet on \(AppUpdateService.defaultRepo)."
@@ -239,8 +281,8 @@ final class SynthViewModel {
     func installAvailableUpdate() {
         guard let release = availableUpdate, !isInstallingUpdate else { return }
         isInstallingUpdate = true
-        updateStatusHeadline = "DOWNLOADING \(release.tagName)…"
-        updateStatusDetail = "Fetching macOS app bundle from GitHub Releases."
+        updateStatusHeadline = "DOWNLOADING & VERIFYING \(release.tagName)…"
+        updateStatusDetail = "Checking SHA-256 and code signature before installing."
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -252,9 +294,14 @@ final class SynthViewModel {
                 NSApp.terminate(nil)
             } catch {
                 self.isInstallingUpdate = false
-                self.updateStatusHeadline = "OPENING GITHUB RELEASE"
-                self.updateStatusDetail = error.localizedDescription
-                NSWorkspace.shared.open(release.htmlURL)
+                if let updateError = error as? AppUpdateError, updateError.shouldOpenReleasePage {
+                    self.updateStatusHeadline = "OPENING GITHUB RELEASE"
+                    self.updateStatusDetail = error.localizedDescription
+                    NSWorkspace.shared.open(release.htmlURL)
+                } else {
+                    self.updateStatusHeadline = "UPDATE FAILED"
+                    self.updateStatusDetail = error.localizedDescription
+                }
             }
         }
     }
@@ -278,6 +325,12 @@ final class SynthViewModel {
     }
 
     func shutdown() {
+        updateLoopTask?.cancel()
+        updateLoopTask = nil
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+            self.wakeObserver = nil
+        }
         uiTimer?.invalidate()
         uiTimer = nil
         hoverHelp.teardown()

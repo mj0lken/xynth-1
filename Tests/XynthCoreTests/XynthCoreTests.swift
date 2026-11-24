@@ -372,3 +372,122 @@ struct XynthCoreTests {
         engine.cancelDemo()
     }
 }
+
+@Suite("Self-update")
+struct SelfUpdateTests {
+    let validSHA = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    let zipURL = URL(string: "https://github.com/mj0lken/xynth-1/releases/download/v0.3.0/XYNTH-1-v0.3.0-arm64.zip")!
+    let checksumURL = URL(string: "https://github.com/mj0lken/xynth-1/releases/download/v0.3.0/XYNTH-1-v0.3.0-arm64.zip.sha256")!
+
+    @Test("Release parser extracts trusted arm64 zip, GitHub digest, and companion .sha256 URL")
+    func parsesDigestAndChecksumAsset() throws {
+        let json = Data("""
+        {
+          "tag_name": "v0.3.0",
+          "name": "XYNTH-1 v0.3.0",
+          "body": "Hardened updater.",
+          "html_url": "https://github.com/mj0lken/xynth-1/releases/tag/v0.3.0",
+          "assets": [
+            {
+              "name": "XYNTH-1-v0.3.0-arm64.zip",
+              "browser_download_url": "\(zipURL.absoluteString)",
+              "digest": "sha256:\(validSHA.uppercased())"
+            },
+            {
+              "name": "XYNTH-1-v0.3.0-arm64.zip.sha256",
+              "browser_download_url": "\(checksumURL.absoluteString)"
+            }
+          ]
+        }
+        """.utf8)
+        let info = try #require(AppUpdateService.parseGitHubReleaseJSON(json))
+        #expect(info.zipAssetURL == zipURL)
+        #expect(info.sha256 == validSHA)
+        #expect(info.checksumAssetURL == checksumURL)
+    }
+
+    @Test("Rejects foreign download hosts, wrong repos, insecure schemes, and path traversal")
+    func rejectsUntrustedDownloads() throws {
+        let badURLs = [
+            "https://evil.example/mj0lken/xynth-1/releases/download/v0.3.0/XYNTH-1-v0.3.0-arm64.zip",
+            "https://github.com/other/xynth-1/releases/download/v0.3.0/XYNTH-1-v0.3.0-arm64.zip",
+            "https://github.com/mj0lken/xynth-1/releases/download/v0.3.0/../../other/repo/XYNTH-1-v0.3.0-arm64.zip",
+            "https://github.com/mj0lken/xynth-1/releases/download/v0.3.0/%2e%2e/XYNTH-1-v0.3.0-arm64.zip",
+            "http://github.com/mj0lken/xynth-1/releases/download/v0.3.0/XYNTH-1-v0.3.0-arm64.zip",
+        ]
+        for raw in badURLs {
+            let url = try #require(URL(string: raw))
+            #expect(!AppUpdateService.isTrustedDownload(url))
+        }
+        #expect(AppUpdateService.isTrustedDownload(zipURL))
+    }
+
+    @Test("Parses valid digests and .sha256 sidecars, rejecting malformed values")
+    func parsesDigestsAndChecksumFiles() {
+        #expect(AppUpdateService.parseDigest("sha256:\(validSHA.uppercased())") == validSHA)
+        #expect(AppUpdateService.parseDigest("md5:\(validSHA)") == nil)
+        #expect(AppUpdateService.parseDigest("sha256:short") == nil)
+        #expect(AppUpdateService.parseChecksumFile("\(validSHA)  XYNTH-1-v0.3.0-arm64.zip\n") == validSHA)
+        #expect(AppUpdateService.parseChecksumFile("  \(validSHA.uppercased()) *XYNTH-1-v0.3.0-arm64.zip\r\n") == validSHA)
+        #expect(AppUpdateService.parseChecksumFile("<html>404</html>") == nil)
+    }
+
+    @Test("Evaluates self-update eligibility including AppTranslocation and writability checks")
+    func canSelfUpdateMatrix() {
+        let bundleID = AppUpdateService.expectedBundleID
+        #expect(AppUpdateService.canSelfUpdate(
+            bundlePath: "/Applications/XYNTH-1.app", bundleIdentifier: bundleID,
+            isParentWritable: true, isBundleWritable: true
+        ))
+        #expect(!AppUpdateService.canSelfUpdate(
+            bundlePath: "/Users/dev/xynth-1/.build/debug", bundleIdentifier: bundleID,
+            isParentWritable: true, isBundleWritable: true
+        ))
+        #expect(!AppUpdateService.canSelfUpdate(
+            bundlePath: "/private/var/folders/xx/AppTranslocation/UUID/d/XYNTH-1.app", bundleIdentifier: bundleID,
+            isParentWritable: true, isBundleWritable: true
+        ))
+        #expect(!AppUpdateService.canSelfUpdate(
+            bundlePath: "/Applications/XYNTH-1.app", bundleIdentifier: "com.example.other",
+            isParentWritable: true, isBundleWritable: true
+        ))
+        #expect(!AppUpdateService.canSelfUpdate(
+            bundlePath: "/Applications/XYNTH-1.app", bundleIdentifier: bundleID,
+            isParentWritable: false, isBundleWritable: true
+        ))
+        #expect(!AppUpdateService.canSelfUpdate(
+            bundlePath: "/Applications/XYNTH-1.app", bundleIdentifier: bundleID,
+            isParentWritable: true, isBundleWritable: false
+        ))
+    }
+
+    @Test("Computes SHA-256 matching the standard vector for \"abc\"")
+    func sha256Vector() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xynth-sha-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data("abc".utf8).write(to: url)
+        #expect(try AppUpdateService.sha256(of: url) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+    }
+
+    @Test("Install script ignores HUP, waits on PID, guards rollback on backup existence, and uses ditto and open")
+    func installScriptSanity() {
+        let script = AppUpdateService.installScript()
+        #expect(script.hasPrefix("#!/usr/bin/env bash"))
+        #expect(script.contains("trap '' HUP"))
+        #expect(script.contains(#"kill -0 "$PID""#))
+        #expect(script.contains(#"if [[ -e "$BACKUP" ]]; then"#))
+        #expect(script.contains(#"/usr/bin/ditto "$NEW_APP" "$TARGET_APP""#))
+        #expect(script.contains(#"/usr/bin/open "$TARGET_APP""#))
+    }
+
+    @Test("30-minute check cadence handles nil, boundary, and clock skew")
+    func checkCadence() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(AppUpdateService.checkInterval == 30 * 60)
+        #expect(AppUpdateService.isDue(lastCheck: nil, now: now))
+        #expect(!AppUpdateService.isDue(lastCheck: now.addingTimeInterval(-600), now: now))
+        #expect(AppUpdateService.isDue(lastCheck: now.addingTimeInterval(-AppUpdateService.checkInterval), now: now))
+        #expect(AppUpdateService.isDue(lastCheck: now.addingTimeInterval(60), now: now))
+    }
+}
