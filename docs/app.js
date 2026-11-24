@@ -147,7 +147,6 @@
   const ambientCtx = ambientCanvas.getContext('2d');
   const statusText = document.getElementById('pad-status-text');
   const readoutEl = document.getElementById('pad-readout');
-  const motionToggle = document.getElementById('motion-toggle');
   const demoToggle = document.getElementById('demo-toggle');
   const demoLabel = document.getElementById('demo-label');
   const scaleToggle = document.getElementById('scale-toggle');
@@ -247,12 +246,13 @@
       }
     }
 
-    // Ripple ambient page wave gently with primary demo finger
+    // Sync ambient background wave directly to the primary demo finger's viewport position
     const lead = activeVoices.get('demo-1');
     if (lead) {
-      ambientPointer.x = 0.2 + lead.x * 0.6;
-      ambientPointer.targetY = 0.34 + (1 - lead.y) * 0.22;
-      ambientPointer.energy = Math.max(ambientPointer.energy, lead.vol * 0.7);
+      const rect = padEl.getBoundingClientRect();
+      ambientPointer.x = (rect.left + lead.x * rect.width) / Math.max(1, window.innerWidth);
+      ambientPointer.targetY = (rect.top + (1 - lead.y) * rect.height) / Math.max(1, window.innerHeight);
+      ambientPointer.energy = Math.max(ambientPointer.energy, lead.vol * 0.9);
     }
   }
 
@@ -332,19 +332,12 @@
     });
   });
 
-  // --- Motion Pause / Reduced-Motion Respect (WCAG 2.2.2) ---
+  // --- Reduced-Motion Preference Respect ---
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let motionPaused = prefersReducedMotion.matches;
-
-  function syncMotionButton() {
-    motionToggle.textContent = motionPaused ? 'Resume motion' : 'Pause motion';
-  }
-
-  motionToggle.addEventListener('click', () => {
-    motionPaused = !motionPaused;
-    syncMotionButton();
+  let reducedMotion = prefersReducedMotion.matches;
+  prefersReducedMotion.addEventListener('change', (ev) => {
+    reducedMotion = ev.matches;
   });
-  syncMotionButton();
 
   // --- Pointer & Keyboard Interaction on the Pad ---
   function normalizedCoords(ev) {
@@ -444,30 +437,42 @@
 
     const baseY = ambientPointer.y * h;
     const focusX = ambientPointer.x * w;
-    const freq = voicesArr.length > 0
-      ? 2.2 + Math.log2(Math.max(120, voicesArr[0].hz) / 120) * 2.5
+    const isPlaying = voicesArr.length > 0;
+    const freq = isPlaying
+      ? 2.4 + Math.log2(Math.max(120, voicesArr[0].hz) / 120) * 2.8
       : 3.4;
 
     const grad = ambientCtx.createLinearGradient(0, 0, w, 0);
-    grad.addColorStop(0, 'rgba(0, 142, 180, 0.0)');
-    grad.addColorStop(Math.max(0.08, Math.min(0.92, ambientPointer.x - 0.16)), 'rgba(0, 142, 180, 0.36)');
-    grad.addColorStop(Math.max(0.10, Math.min(0.94, ambientPointer.x)), 'rgba(29, 87, 232, 0.44)');
-    grad.addColorStop(Math.max(0.12, Math.min(0.96, ambientPointer.x + 0.16)), 'rgba(223, 68, 14, 0.38)');
-    grad.addColorStop(1, 'rgba(223, 68, 14, 0.0)');
+    if (isPlaying) {
+      grad.addColorStop(0, 'rgba(0, 142, 180, 0.0)');
+      grad.addColorStop(0.14, 'rgba(0, 142, 180, 0.56)');
+      grad.addColorStop(0.50, 'rgba(29, 87, 232, 0.64)');
+      grad.addColorStop(0.86, 'rgba(223, 68, 14, 0.56)');
+      grad.addColorStop(1, 'rgba(223, 68, 14, 0.0)');
+    } else {
+      grad.addColorStop(0, 'rgba(0, 142, 180, 0.0)');
+      grad.addColorStop(Math.max(0.08, Math.min(0.92, ambientPointer.x - 0.16)), 'rgba(0, 142, 180, 0.36)');
+      grad.addColorStop(Math.max(0.10, Math.min(0.94, ambientPointer.x)), 'rgba(29, 87, 232, 0.44)');
+      grad.addColorStop(Math.max(0.12, Math.min(0.96, ambientPointer.x + 0.16)), 'rgba(223, 68, 14, 0.38)');
+      grad.addColorStop(1, 'rgba(223, 68, 14, 0.0)');
+    }
 
     ambientCtx.save();
     ambientCtx.strokeStyle = grad;
-    ambientCtx.lineWidth = 1.75;
+    ambientCtx.lineWidth = isPlaying ? 2.1 : 1.75;
     ambientCtx.beginPath();
 
-    const steps = 140;
+    const steps = 160;
+    const spread = isPlaying ? Math.max(420, w * 0.62) : Math.max(220, w * 0.32);
     for (let i = 0; i <= steps; i++) {
       const u = i / steps;
       const x = u * w;
-      const dist = Math.abs(x - focusX) / Math.max(220, w * 0.32);
-      const env = Math.exp(-dist * dist * 2.2);
-      const amp = (12 + effective * 34) * env;
-      const y = baseY + Math.sin(u * Math.PI * 2 * freq - nowSec * 5.2) * amp;
+      const dist = Math.abs(x - focusX) / spread;
+      const env = isPlaying
+        ? Math.sin(u * Math.PI) * (0.45 + 0.55 * Math.exp(-dist * dist * 1.4))
+        : Math.exp(-dist * dist * 2.2);
+      const amp = (12 + effective * (isPlaying ? 40 : 34)) * env;
+      const y = baseY + Math.sin(u * Math.PI * 2 * freq - nowSec * (isPlaying ? 8.5 : 5.2)) * amp;
       if (i === 0) ambientCtx.moveTo(x, y);
       else ambientCtx.lineTo(x, y);
     }
@@ -504,6 +509,15 @@
     const targetEnergy = voicesArr.length > 0 ? Math.max(...voicesArr.map((v) => v.vol)) : 0;
     smoothedEnergy += (targetEnergy - smoothedEnergy) * Math.min(1, dt * 12);
 
+    // Keep background ambient wave aligned with active touch/pad interaction
+    if (voicesArr.length > 0 && !demoRunning) {
+      const rect = padEl.getBoundingClientRect();
+      const lead = voicesArr[0];
+      ambientPointer.x = (rect.left + lead.x * rect.width) / Math.max(1, window.innerWidth);
+      ambientPointer.targetY = (rect.top + (1 - lead.y) * rect.height) / Math.max(1, window.innerHeight);
+      ambientPointer.energy = Math.max(ambientPointer.energy, lead.vol);
+    }
+
     // 2. Embedded Liquid Magnetic Ferrofluid
     if (ferroEnabled) {
       const targetCX = voicesArr.length > 0
@@ -519,7 +533,8 @@
       const cy = ferroCenterY * h;
       const baseR = Math.min(w, h) * (0.175 + smoothedEnergy * 0.065);
 
-      if (!motionPaused || demoRunning) {
+      // Animate ferrofluid physics only when actively driven (or settling smoothly back to rest)
+      if (!reducedMotion && (smoothedEnergy > 0.005 || activeVoices.size > 0)) {
         ferroPhase += dt * (1.8 + smoothedEnergy * 5.2);
         const partials = TIMBRES[currentTimbre] || TIMBRES.warm;
         const primaryHz = voicesArr.length > 0 ? voicesArr[0].hz : 220;
@@ -527,7 +542,7 @@
 
         for (let i = 0; i < VERTEX_COUNT; i++) {
           const theta = (i / VERTEX_COUNT) * Math.PI * 2;
-          let target = 1.0 + 0.03 * Math.sin(theta * 3 + ferroPhase * 0.7);
+          let target = 1.0 + 0.025 * Math.sin(theta * 3 + ferroPhase * 0.7) * Math.min(1, smoothedEnergy * 2.5);
           if (smoothedEnergy > 0.01) {
             for (let p = 0; p < partials.length; p++) {
               const lobes = 6 + Math.round(normPitch * 10) + p * 3;
@@ -583,7 +598,8 @@
       padCtx.stroke();
     }
 
-    // 3. Direct Touch Waveforms, Glide Trails & Numbered Fingertip Nodes
+    // 3. Glide Trails, Standing-Wave Rings & Numbered Fingertip Nodes
+    // (The full-viewport waveform behind the pad runs instead of a duplicate wave inside the pad.)
     const voiceColors = ['#2bf7ca', '#4da3ff', '#ffb838', '#ff5a1f', '#c46bff'];
     voicesArr.forEach((v, idx) => {
       const color = voiceColors[idx % voiceColors.length];
@@ -606,25 +622,6 @@
         }
         padCtx.restore();
       }
-
-      // Live touch waveform slicing across fingertip Y line
-      padCtx.save();
-      padCtx.strokeStyle = color;
-      padCtx.globalAlpha = 0.72;
-      padCtx.lineWidth = 1.6;
-      padCtx.beginPath();
-      const cycles = 2 + Math.log2(Math.max(120, v.hz) / 120) * 3.5;
-      for (let s = 0; s <= 120; s++) {
-        const u = s / 120;
-        const x = u * w;
-        const dist = Math.abs(x - px) / (w * 0.28);
-        const env = Math.exp(-dist * dist * 2.0);
-        const y = py + Math.sin(u * Math.PI * 2 * cycles - nowSec * 14) * (10 + v.vol * 24) * env;
-        if (s === 0) padCtx.moveTo(x, y);
-        else padCtx.lineTo(x, y);
-      }
-      padCtx.stroke();
-      padCtx.restore();
 
       // Concentric standing-wave rings
       padCtx.save();
@@ -665,7 +662,7 @@
 
     stepDemo(nowMs);
 
-    if (!motionPaused || activeVoices.size > 0) {
+    if (!reducedMotion || activeVoices.size > 0) {
       drawAmbientWave(nowSec);
     } else {
       ambientCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);

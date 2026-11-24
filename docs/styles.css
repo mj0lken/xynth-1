@@ -142,24 +142,6 @@ body::before {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
-}
-
-.nav-link {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-secondary);
-  text-decoration: none;
-  padding-block: 6px;
-  padding-inline: 6px;
-  transition: color 0.16s ease;
-}
-
-.nav-link:hover {
-  color: var(--ink);
 }
 
 .util-btn {
@@ -190,7 +172,7 @@ body::before {
   }
 }
 
-:is(.util-btn, .nav-link, .hw-key, .theme-chip, .cta-primary, .cta-secondary, .pad-surface):focus-visible {
+:is(.util-btn, .hw-key, .theme-chip, .cta-primary, .cta-secondary, .pad-surface):focus-visible {
   outline: 2px solid var(--accent-cobalt);
   outline-offset: 2px;
 }
@@ -538,7 +520,8 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: clamp(44px, 6vw, 76px);
-  padding-block-start: clamp(28px, 4vw, 48px);
+  margin-block-start: clamp(52px, 7vw, 88px);
+  padding-block-start: clamp(44px, 5.5vw, 68px);
   border-block-start: 1px solid var(--rule);
 }
 
@@ -1101,29 +1084,6 @@ h3 {
   border-color: var(--t-c2);
 }
 
-/* Closing Editorial CTA */
-.closing-cta {
-  text-align: center;
-  padding-block: clamp(32px, 5vw, 56px);
-  padding-inline: clamp(18px, 4vw, 40px);
-  border-radius: 20px;
-  background: var(--surface);
-  border: 1px solid var(--chassis-edge);
-  box-shadow: var(--shadow-panel);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.closing-sub {
-  margin: 0;
-  max-inline-size: 52ch;
-  font-size: 0.94rem;
-  line-height: 1.55;
-  color: var(--ink-secondary);
-}
-
 /* Footer */
 .footer {
   display: flex;
@@ -1153,8 +1113,7 @@ h3 {
   .cta-primary,
   .cta-secondary,
   .panel-frame,
-  .theme-stage,
-  .closing-cta {
+  .theme-stage {
     border: 1.5px solid CanvasText;
     background: Canvas;
     color: CanvasText;
