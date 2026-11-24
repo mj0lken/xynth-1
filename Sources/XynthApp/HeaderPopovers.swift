@@ -90,9 +90,7 @@ struct ThemeGalleryPopover: View {
         }
         .padding(14)
         .frame(width: 400)
-        .background(p.dropdownBg)
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(p.dropdownBorder, lineWidth: 1.1).padding(1))
-        .preferredColorScheme(.dark)
+        .xynthPopoverSurface(p)
     }
 }
 
@@ -152,9 +150,7 @@ struct HardwareActuatorPopover: View {
         }
         .padding(12)
         .frame(width: 270)
-        .background(p.dropdownBg)
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(p.dropdownBorder, lineWidth: 1.1).padding(1))
-        .preferredColorScheme(.dark)
+        .xynthPopoverSurface(p)
     }
 }
 
@@ -263,9 +259,7 @@ struct AudioRoutingPopover: View {
         }
         .padding(14)
         .frame(width: 315)
-        .background(p.dropdownBg)
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(p.dropdownBorder, lineWidth: 1.1).padding(1))
-        .preferredColorScheme(.dark)
+        .xynthPopoverSurface(p)
     }
 
     private func deviceRow(id: String, title: String, subtitle: String?, selected: Bool, action: @escaping () -> Void) -> some View {
@@ -330,12 +324,9 @@ struct MuteProofPopover: View {
         }
         .padding(13)
         .frame(width: 285)
-        .background(palette.dropdownBg)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder((audioMirrorEnabled ? palette.enc2 : palette.dropdownBorder).opacity(0.75), lineWidth: 1.1)
-                .padding(1)
+        .xynthPopoverSurface(
+            palette,
+            borderColor: (audioMirrorEnabled ? palette.enc2 : palette.dropdownBorder).opacity(0.75)
         )
-        .preferredColorScheme(.dark)
     }
 }

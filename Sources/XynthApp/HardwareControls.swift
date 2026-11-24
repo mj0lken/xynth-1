@@ -320,13 +320,21 @@ struct HardwareDropdown<Selection: Hashable>: View {
         }
         .padding(8)
         .frame(width: columns > 1 ? 188 : max(176, (width ?? 140) + 34))
-        .background(palette.dropdownBg)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(palette.dropdownBorder, lineWidth: 1.1)
-                .padding(1)
-        )
-        .preferredColorScheme(.dark)
+        .xynthPopoverSurface(palette)
+    }
+}
+
+extension View {
+    /// Unified hardware popover container styling shared by custom dropdowns and header utility popovers.
+    func xynthPopoverSurface(_ palette: XynthPalette, borderColor: Color? = nil) -> some View {
+        self
+            .background(palette.dropdownBg)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(borderColor ?? palette.dropdownBorder, lineWidth: 1.1)
+                    .padding(1)
+            )
+            .preferredColorScheme(.dark)
     }
 }
 

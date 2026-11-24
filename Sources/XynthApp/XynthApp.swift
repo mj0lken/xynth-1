@@ -2,6 +2,16 @@ import AppKit
 import SwiftUI
 import XynthCore
 
+/// Shared window layout constants so SwiftUI constraints and AppKit window resizing never drift.
+enum XynthWindowLayout {
+    static let compactMinWidth: CGFloat = 1000
+    static let expandedMinWidth: CGFloat = 1310
+    static let minHeight: CGFloat = 760
+    static let defaultWidth: CGFloat = 1120
+    static let defaultHeight: CGFloat = 815
+    static let expansionBayDeltaWidth: CGFloat = 324
+}
+
 @main
 struct XynthApp: App {
     @NSApplicationDelegateAdaptor(XynthAppDelegate.self) private var appDelegate
@@ -19,7 +29,7 @@ struct XynthApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1120, height: 815)
+        .defaultSize(width: XynthWindowLayout.defaultWidth, height: XynthWindowLayout.defaultHeight)
         .windowResizability(.contentMinSize)
         .commands {
             CommandMenu("Synth") {
@@ -99,11 +109,11 @@ final class XynthAppDelegate: NSObject, NSApplicationDelegate {
                 window.isOpaque = true
                 window.titlebarAppearsTransparent = true
                 window.isMovableByWindowBackground = false
-                window.minSize = NSSize(width: 1000, height: 760)
+                window.minSize = NSSize(width: XynthWindowLayout.compactMinWidth, height: XynthWindowLayout.minHeight)
                 // Guard against oversized/restored frames from earlier layout bugs
                 var frame = window.frame
-                if frame.width > 1280 || frame.height > 920 || frame.height < 760 {
-                    frame.size = NSSize(width: 1120, height: 815)
+                if frame.width > 1280 || frame.height > 920 || frame.height < XynthWindowLayout.minHeight {
+                    frame.size = NSSize(width: XynthWindowLayout.defaultWidth, height: XynthWindowLayout.defaultHeight)
                     window.setFrame(frame, display: true)
                     window.center()
                 }
@@ -168,9 +178,9 @@ struct XynthMainView: View {
             StyledHoverTooltipOverlay(palette: p, helpState: vm.hoverHelp)
         }
         .frame(
-            minWidth: vm.showExpansionBay ? 1310 : 1000,
+            minWidth: vm.showExpansionBay ? XynthWindowLayout.expandedMinWidth : XynthWindowLayout.compactMinWidth,
             maxWidth: .infinity,
-            minHeight: 750,
+            minHeight: XynthWindowLayout.minHeight,
             maxHeight: .infinity
         )
         .coordinateSpace(name: "xynthRoot")

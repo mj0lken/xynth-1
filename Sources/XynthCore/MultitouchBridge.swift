@@ -249,16 +249,19 @@ public final class MultitouchBridge: HapticActuatorOutput, @unchecked Sendable {
     private var _status: HapticHardwareStatus = .frameworkUnavailable("Not initialized")
     private var _availableDevices: [TrackpadDeviceInfo] = []
 
-    public var status: HapticHardwareStatus {
+    @inline(__always)
+    private func withStateLock<T>(_ body: () -> T) -> T {
         os_unfair_lock_lock(&stateLock)
         defer { os_unfair_lock_unlock(&stateLock) }
-        return _status
+        return body()
+    }
+
+    public var status: HapticHardwareStatus {
+        withStateLock { _status }
     }
 
     public var availableDevices: [TrackpadDeviceInfo] {
-        os_unfair_lock_lock(&stateLock)
-        defer { os_unfair_lock_unlock(&stateLock) }
-        return _availableDevices
+        withStateLock { _availableDevices }
     }
 
     public init() {
@@ -383,9 +386,7 @@ public final class MultitouchBridge: HapticActuatorOutput, @unchecked Sendable {
     public func play(tones: [HapticTone], durationMs: Double, level: Float) {
         guard !tones.isEmpty, level > 0.0005, durationMs >= 3.0 else { return }
 
-        os_unfair_lock_lock(&stateLock)
-        let pointer = actuatorPointer
-        os_unfair_lock_unlock(&stateLock)
+        let pointer = withStateLock { actuatorPointer }
 
         guard let pointer, let actuationCreateFn, let actuationPlayFn else { return }
 
@@ -431,31 +432,28 @@ public final class MultitouchBridge: HapticActuatorOutput, @unchecked Sendable {
 
     @discardableResult
     public func startTouchCapture() -> Bool {
-        os_unfair_lock_lock(&stateLock)
-        if touchCaptureRunning {
-            os_unfair_lock_unlock(&stateLock)
-            return true
+        let devs: [UnsafeMutableRawPointer]? = withStateLock {
+            if touchCaptureRunning { return nil }
+            return activeTouchDevicePointersLocked()
         }
-        let devs = activeTouchDevicePointersLocked()
-        os_unfair_lock_unlock(&stateLock)
-
+        guard let devs else { return true }
         guard let registerCallbackFn, let deviceStartFn, !devs.isEmpty else { return false }
+
         for dev in devs {
             registerCallbackFn(dev, mtContactCallback)
             deviceStartFn(dev, 0)
         }
-        os_unfair_lock_lock(&stateLock)
-        touchCaptureRunning = true
-        os_unfair_lock_unlock(&stateLock)
+        withStateLock { touchCaptureRunning = true }
         return true
     }
 
     public func stopTouchCapture() {
-        os_unfair_lock_lock(&stateLock)
-        let wasRunning = touchCaptureRunning
-        let devs = activeTouchDevicePointersLocked()
-        touchCaptureRunning = false
-        os_unfair_lock_unlock(&stateLock)
+        let (wasRunning, devs) = withStateLock { () -> (Bool, [UnsafeMutableRawPointer]) in
+            let running = touchCaptureRunning
+            let activeDevs = activeTouchDevicePointersLocked()
+            touchCaptureRunning = false
+            return (running, activeDevs)
+        }
 
         if wasRunning {
             for dev in devs {
@@ -474,24 +472,24 @@ public final class MultitouchBridge: HapticActuatorOutput, @unchecked Sendable {
     // MARK: - Private helpers
 
     private func closeActuatorOnly() {
-        os_unfair_lock_lock(&stateLock)
-        let ref = actuatorRef
-        actuatorRef = nil
-        actuatorPointer = nil
-        activeDeviceID = 0
-        deviceList = nil
-        os_unfair_lock_unlock(&stateLock)
-
+        let ref: CFTypeRef? = withStateLock {
+            let current = actuatorRef
+            actuatorRef = nil
+            actuatorPointer = nil
+            activeDeviceID = 0
+            deviceList = nil
+            return current
+        }
         if let ref {
             _ = actuatorCloseFn?(ref)
         }
     }
 
     private func setStatus(_ status: HapticHardwareStatus, devices: [TrackpadDeviceInfo]) {
-        os_unfair_lock_lock(&stateLock)
-        _status = status
-        _availableDevices = devices
-        os_unfair_lock_unlock(&stateLock)
+        withStateLock {
+            _status = status
+            _availableDevices = devices
+        }
     }
 
     private func activeTouchDevicePointersLocked() -> [UnsafeMutableRawPointer] {

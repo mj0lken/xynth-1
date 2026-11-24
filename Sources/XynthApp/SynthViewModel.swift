@@ -383,13 +383,15 @@ final class SynthViewModel {
     }
 
     private func resizeWindowForExpansionBay(expanded: Bool) {
-        let deltaWidth: CGFloat = 324
+        let deltaWidth = XynthWindowLayout.expansionBayDeltaWidth
         DispatchQueue.main.async {
             guard let window = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first else { return }
-            let targetMinW: CGFloat = expanded ? 1290 : 980
-            window.minSize = NSSize(width: targetMinW, height: 740)
+            let targetMinW = expanded ? XynthWindowLayout.expandedMinWidth : XynthWindowLayout.compactMinWidth
+            window.minSize = NSSize(width: targetMinW, height: XynthWindowLayout.minHeight)
             var frame = window.frame
-            let desiredW = expanded ? max(targetMinW, frame.width + deltaWidth) : max(980, frame.width - deltaWidth)
+            let desiredW = expanded
+                ? max(targetMinW, frame.width + deltaWidth)
+                : max(XynthWindowLayout.compactMinWidth, frame.width - deltaWidth)
             if let screen = window.screen ?? NSScreen.main {
                 let visible = screen.visibleFrame
                 frame.size.width = min(desiredW, visible.width - 24)
